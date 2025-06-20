@@ -124,4 +124,3 @@ def eda_dashboard_tab():
         st.info("Please upload a file to proceed.")
 
     st.divider()
-    st.write("**Created by NivAnalytics - https://www.linkedin.com/in/nivantha-bandara/**")
