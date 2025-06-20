@@ -4,8 +4,6 @@ pygwalker
 pandas
 matplotlib
 seaborn
-eda_tab
-eda_dashboard_tab
 statsmodels
 numpy
 scikit-learn
