@@ -123,37 +123,6 @@ def eda_dashboard_tab():
             
         
         # ======================
-        # SECTION 5: Exponential Arima
-        # ======================
-        st.write("### 5. OLS Regression")
-
-        # Step 1: User selects Y and X variables
-        st.write("#### Select variables for OLS Regression")
-        y_col = st.selectbox("**Dependent Variable (Y)**", numeric_columns, key="ols_y")
-
-        x_cols = st.multiselect("**Independent Variable(s) (X)**", 
-                                [col for col in numeric_columns if col != y_col], 
-                                default=[col for col in numeric_columns if col != y_col][:1],
-                                key="ols_x")
-
-        if y_col and x_cols:
-            import statsmodels.api as sm
-
-            X = data[x_cols]
-            X = sm.add_constant(X)  # Adds intercept term
-            y = data[y_col]
-
-            try:
-                model = sm.OLS(y, X).fit()
-                st.write("#### Regression Summary")
-                st.text(model.summary())
-            except Exception as e:
-                st.error(f"OLS regression failed: {e}")
-        else:
-            st.info("Please select a dependent and at least one independent variable for regression.")
-            
-        
-        # ======================
         # SECTION 6: OLS Regression
         # ======================
         st.write("### 5. OLS Regression")
