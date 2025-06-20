@@ -185,11 +185,10 @@ def eda_dashboard_tab():
             
         
         # ======================
-        # SECTION 7: Holt Winters Time Series Forecasting
+        # SECTION 6: Holt-Winters Forecasting
         # ======================
-        st.write("### 5. Holt-Winters Forecasting")
-
-        # Ensure date is parsed or exists
+        st.write("### 6. Holt-Winters Time Series Forecasting")
+        
         if 'Date' not in data.columns:
             st.warning("A 'Date' column is required in the dataset for time series forecasting.")
         else:
@@ -197,7 +196,6 @@ def eda_dashboard_tab():
             data[date_column] = pd.to_datetime(data[date_column])
             data = data.sort_values(by=date_column)
         
-            # Step 1: User selects numeric columns to forecast
             st.write("#### Select time series columns to forecast")
             columns_to_forecast = st.multiselect("**Columns to Forecast**", numeric_columns, key="forecast_cols")
         
@@ -206,16 +204,15 @@ def eda_dashboard_tab():
                 from statsmodels.tsa.holtwinters import ExponentialSmoothing
                 import numpy as np
         
-                # Resample monthly
                 data.set_index(date_column, inplace=True)
                 full_data_monthly = data[columns_to_forecast].resample('M').mean()
         
-                # Split data: last month = test
                 train_data_monthly = full_data_monthly.iloc[:-1]
                 actuals_monthly = full_data_monthly.iloc[-1:]
         
                 forecast_april = {}
                 decompositions_monthly = {}
+                accuracy_metrics_monthly = {}
         
                 st.write("#### Seasonal Decomposition Plots")
                 for col in columns_to_forecast:
@@ -229,7 +226,6 @@ def eda_dashboard_tab():
                         st.warning(f"Could not decompose column {col}: {e}")
         
                 st.write("#### Forecasts and Accuracy Metrics")
-                accuracy_metrics_monthly = {}
                 for col in columns_to_forecast:
                     try:
                         ts = train_data_monthly[col]
@@ -259,6 +255,10 @@ def eda_dashboard_tab():
                     except Exception as e:
                         st.error(f"Forecasting failed for {col}: {e}")
         
+                # Optional summary table
+                st.write("#### Forecast Accuracy Summary")
+                forecast_df = pd.DataFrame.from_dict(accuracy_metrics_monthly, orient='index')
+                st.dataframe(forecast_df.style.format("{:.2f}"), use_container_width=True)
             else:
                 st.info("Please select at least one column to forecast.")
             
