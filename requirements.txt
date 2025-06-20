@@ -2,21 +2,12 @@ streamlit
 openpyxl
 pygwalker
 pandas
-matplotlib.pyplot
+matplotlib
 seaborn
-datetime
-sys
 eda_tab
 eda_dashboard_tab
-statsmodels.api
-streamlit
-pandas
+statsmodels
 numpy
-matplotlib.pyplot
-math
-sklearn.linear_model
-LinearRegression
-sklearn.metrics
-r2_score 
-mean_squared_error
+scikit-learn
+
 
