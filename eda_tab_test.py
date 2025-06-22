@@ -85,41 +85,60 @@ def eda_dashboard_tab():
                 st.error(f"Error occurred: {e}")
 
         # ======================
-        # SECTION 4: Correlation and Line Chart
+        # SECTION 4: Correlation and Dual-Axis Line Chart with Split Tooltip
         # ======================
         st.divider()
         st.write("### 4. Correlation and Dual-Axis Line Chart")
-
+        
         numeric_columns = data.select_dtypes(include=['float64', 'int64']).columns.tolist()
         if len(numeric_columns) < 2:
             st.info("Not enough numeric columns for correlation or plotting.")
             return
-
+        
         col1 = st.selectbox("Select first column (Y-axis left)", numeric_columns, index=0)
         col2 = st.selectbox("Select second column (Y-axis right)", numeric_columns, index=1)
-
+        
         if col1 and col2 and col1 != col2:
             st.write(f"**Pearson Correlation between `{col1}` and `{col2}`:**")
             correlation = data[col1].corr(data[col2])
             st.metric(label="Correlation Coefficient", value=f"{correlation:.4f}")
-
-            st.write("**Line Chart with Dual Axes**")
+        
+            # Split selector
+            st.write("**Select split point for Training and Testing Sets**")
+            split_index = st.slider("Split index (everything before this is training data):", 
+                                    min_value=1, 
+                                    max_value=len(data)-1, 
+                                    value=int(len(data)*0.8))
+        
+            train_data = data.iloc[:split_index]
+            test_data = data.iloc[split_index:]
+        
+            st.write(f"**Training Data:** {len(train_data)} rows | **Testing Data:** {len(test_data)} rows")
+        
+            # Plot with split indicator
+            st.write("**Line Chart with Dual Axes and Split Point**")
             fig, ax1 = plt.subplots(figsize=(10, 5))
-
+        
             ax1.set_xlabel("Index")
             ax1.set_ylabel(col1, color="tab:blue")
             ax1.plot(data.index, data[col1], color="tab:blue", label=col1, marker='o')
             ax1.tick_params(axis='y', labelcolor="tab:blue")
-
+        
             ax2 = ax1.twinx()
             ax2.set_ylabel(col2, color="tab:red")
             ax2.plot(data.index, data[col2], color="tab:red", label=col2, marker='x')
             ax2.tick_params(axis='y', labelcolor="tab:red")
-
+        
+            # Add vertical line at split
+            ax1.axvline(x=split_index, color='black', linestyle='--')
+            ax1.text(split_index + 1, ax1.get_ylim()[1]*0.95, 'Split', color='black')
+        
             fig.tight_layout()
             st.pyplot(fig)
+        
         else:
             st.warning("Please select two different numeric columns.")
+
             
         
         # ======================
