@@ -196,37 +196,47 @@ def eda_dashboard_tab():
             st.info("Please select a dependent and at least one independent variable for regression.")
 
         # ======================
-        # SECTION 6: Seasonal Decomposition (on Training Data)
+        # SECTION 6: Seasonal Decomposition with Independent Train/Test Split
         # ======================
-        st.write("### 6. Seasonal Decomposition (on Training Data)")
+        st.write("### 6. Seasonal Decomposition")
         
-        # Ask user to pick a column to decompose
+        # Column selection
         ts_column = st.selectbox("Select a numeric column for decomposition:", numeric_columns, key="decomp_col")
         
-        # Ask user for seasonal frequency
-        freq = st.number_input("Enter seasonal frequency (e.g., 12 for monthly data, 7 for weekly):", 
-                               min_value=2, max_value=min(365, len(train_data)-1), value=12)
+        # Decomposition-specific split
+        st.write("**Select a split point for seasonal decomposition (training set)**")
+        decomp_split_index = st.slider("Split index for decomposition (before this = training):", 
+                                       min_value=1, 
+                                       max_value=len(data)-1, 
+                                       value=int(len(data)*0.8), 
+                                       key="decomp_split")
+        
+        decomp_train_data = data.iloc[:decomp_split_index]
+        decomp_test_data = data.iloc[decomp_split_index:]
+        
+        # Frequency input
+        freq = st.number_input("Enter seasonal frequency (e.g., 12 = yearly seasonality for monthly data):", 
+                               min_value=2, 
+                               max_value=min(365, len(decomp_train_data)-1), 
+                               value=12)
         
         if ts_column:
             try:
-                ts_series = train_data[ts_column]
+                ts_series = decomp_train_data[ts_column]
         
-                # Ensure the index is datetime for decomposition if possible
-                if not pd.api.types.is_datetime64_any_dtype(train_data.index):
+                # Convert index to datetime if possible
+                if not pd.api.types.is_datetime64_any_dtype(decomp_train_data.index):
                     try:
-                        train_data.index = pd.to_datetime(train_data.index, errors='coerce')
+                        decomp_train_data.index = pd.to_datetime(decomp_train_data.index, errors='coerce')
                     except:
-                        st.warning("Index could not be converted to datetime, proceeding with default index.")
+                        st.warning("Index could not be converted to datetime. Proceeding with default numeric index.")
         
-                # Drop NA to prevent errors in decomposition
                 ts_series = ts_series.dropna()
         
-                # Perform seasonal decomposition
                 decomposition = seasonal_decompose(ts_series, model='additive', period=freq)
         
-                st.write(f"**Seasonal Decomposition of `{ts_column}` (Training Set)**")
+                st.write(f"**Seasonal Decomposition of `{ts_column}` on Decomposition Training Set ({len(decomp_train_data)} rows)**")
         
-                # Plot
                 fig, axes = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
         
                 axes[0].plot(ts_series, label="Original")
@@ -250,6 +260,7 @@ def eda_dashboard_tab():
         
             except Exception as e:
                 st.error(f"Seasonal decomposition failed: {e}")
+
 
             
     else:
