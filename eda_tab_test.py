@@ -105,31 +105,16 @@ def eda_dashboard_tab():
             st.metric(label="Correlation Coefficient", value=f"{correlation:.4f}")
         
             # Split selector
-            # Ensure 'Period' column is present and processed
-            if "Period" not in data.columns:
-                st.error("The dataset must contain a 'Period' column for splitting.")
-                st.stop()
-            
-            # Convert Period to string if necessary
-            data["Period"] = data["Period"].astype(str)
-            period_values = sorted(data["Period"].unique().tolist())
-            
-            # Split selector using Period values
-            st.write("**Select split point for Training and Testing Sets based on 'Period' column**")
-            
-            split_period = st.select_slider(
-                "Select cutoff Period (rows with Period <= selected are training data):",
-                options=period_values,
-                value=period_values[int(len(period_values) * 0.8)]
-            )
-            
-            # Perform the split
-            train_data = data[data["Period"] <= split_period]
-            test_data = data[data["Period"] > split_period]
-            
-            # Display split summary
+            st.write("**Select split point for Training and Testing Sets**")
+            split_index = st.slider("Split index (everything before this is training data):", 
+                                    min_value=1, 
+                                    max_value=len(data)-1, 
+                                    value=int(len(data)*0.8))
+        
+            train_data = data.iloc[:split_index]
+            test_data = data.iloc[split_index:]
+        
             st.write(f"**Training Data:** {len(train_data)} rows | **Testing Data:** {len(test_data)} rows")
-
         
             # Plot with split indicator
             st.write("**Line Chart with Dual Axes and Split Point**")
@@ -146,8 +131,8 @@ def eda_dashboard_tab():
             ax2.tick_params(axis='y', labelcolor="tab:red")
         
             # Add vertical line at split
-            ax1.axvline(x=split_period, color='black', linestyle='--')
-            ax1.text(split_period + 1, ax1.get_ylim()[1]*0.95, 'Split', color='black')
+            ax1.axvline(x=split_index, color='black', linestyle='--')
+            ax1.text(split_index + 1, ax1.get_ylim()[1]*0.95, 'Split', color='black')
         
             fig.tight_layout()
             st.pyplot(fig)
@@ -219,29 +204,15 @@ def eda_dashboard_tab():
         ts_column = st.selectbox("Select a numeric column for decomposition:", numeric_columns, key="decomp_col")
         
         # Decomposition-specific split
-        # Ensure 'Period' column is present and processed
-        if "Period" not in data.columns:
-            st.error("The dataset must contain a 'Period' column for splitting.")
-            st.stop()
+        st.write("**Select a split point for seasonal decomposition (training set)**")
+        decomp_split_index = st.slider("Split index for decomposition (before this = training):", 
+                                       min_value=1, 
+                                       max_value=len(data)-1, 
+                                       value=int(len(data)*0.8), 
+                                       key="decomp_split")
         
-        # Convert Period to string if necessary
-        data["Period"] = data["Period"].astype(str)
-        period_values = sorted(data["Period"].unique().tolist())
-        
-        # Split selector using Period values
-        st.write("**Select split point for Training and Testing Sets based on 'Period' column**")
-        
-        split_period = st.select_slider(
-            "Select cutoff Period (rows with Period <= selected are training data):",
-            options=period_values,
-            value=period_values[int(len(period_values) * 0.8)]
-        )
-        
-        # Perform the split
-        decomp_train_data = data[data["Period"] <= split_period]
-        decomp_test_data = data[data["Period"] > split_period]
-
-
+        decomp_train_data = data.iloc[:decomp_split_index]
+        decomp_test_data = data.iloc[decomp_split_index:]
         
         # Frequency input
         freq = st.number_input("Enter seasonal frequency (e.g., 12 = yearly seasonality for monthly data):", 
