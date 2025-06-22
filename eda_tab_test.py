@@ -146,8 +146,8 @@ def eda_dashboard_tab():
             ax2.tick_params(axis='y', labelcolor="tab:red")
         
             # Add vertical line at split
-            ax1.axvline(x=split_index, color='black', linestyle='--')
-            ax1.text(split_index + 1, ax1.get_ylim()[1]*0.95, 'Split', color='black')
+            ax1.axvline(x=split_period, color='black', linestyle='--')
+            ax1.text(split_period + 1, ax1.get_ylim()[1]*0.95, 'Split', color='black')
         
             fig.tight_layout()
             st.pyplot(fig)
@@ -211,70 +211,84 @@ def eda_dashboard_tab():
             st.info("Please select a dependent and at least one independent variable for regression.")
 
         # ======================
-    # SECTION 6: Seasonal Decomposition with Independent Train/Test Split
-    # ======================
-    st.write("### 6. Seasonal Decomposition")
-    
-    # Column selection
-    ts_column = st.selectbox("Select a numeric column for decomposition:", numeric_columns, key="decomp_col")
-    
-    # Decomposition-specific split
-    st.write("**Select a split point for seasonal decomposition (training set)**")
-    decomp_split_index = st.slider("Split index for decomposition (before this = training):", 
-                                   min_value=1, 
-                                   max_value=len(data)-1, 
-                                   value=int(len(data)*0.8), 
-                                   key="decomp_split")
-    
-    decomp_train_data = data.iloc[:decomp_split_index]
-    decomp_test_data = data.iloc[decomp_split_index:]
-    
-    # Frequency input
-    freq = st.number_input("Enter seasonal frequency (e.g., 12 = yearly seasonality for monthly data):", 
-                           min_value=2, 
-                           max_value=min(365, len(decomp_train_data)-1), 
-                           value=12)
-    
-    if ts_column:
-        try:
-            ts_series = decomp_train_data[ts_column]
-    
-            # Convert index to datetime if possible
-            if not pd.api.types.is_datetime64_any_dtype(decomp_train_data.index):
-                try:
-                    decomp_train_data.index = pd.to_datetime(decomp_train_data.index, errors='coerce')
-                except:
-                    st.warning("Index could not be converted to datetime. Proceeding with default numeric index.")
-    
-            ts_series = ts_series.dropna()
-    
-            decomposition = seasonal_decompose(ts_series, model='additive', period=freq)
-    
-            st.write(f"**Seasonal Decomposition of `{ts_column}` on Decomposition Training Set ({len(decomp_train_data)} rows)**")
-    
-            fig, axes = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
-    
-            axes[0].plot(ts_series, label="Original")
-            axes[0].set_ylabel("Original")
-            axes[0].legend(loc='upper left')
-    
-            axes[1].plot(decomposition.trend, label="Trend", color="orange")
-            axes[1].set_ylabel("Trend")
-            axes[1].legend(loc='upper left')
-    
-            axes[2].plot(decomposition.seasonal, label="Seasonal", color="green")
-            axes[2].set_ylabel("Seasonal")
-            axes[2].legend(loc='upper left')
-    
-            axes[3].plot(decomposition.resid, label="Residual", color="red")
-            axes[3].set_ylabel("Residual")
-            axes[3].legend(loc='upper left')
-    
-            plt.tight_layout()
-            st.pyplot(fig)
-    
-        except Exception as e:
-            st.error(f"Seasonal decomposition failed: {e}")
+        # SECTION 6: Seasonal Decomposition with Independent Train/Test Split
+        # ======================
+        st.write("### 6. Seasonal Decomposition")
+        
+        # Column selection
+        ts_column = st.selectbox("Select a numeric column for decomposition:", numeric_columns, key="decomp_col")
+        
+        # Decomposition-specific split
+        # Ensure 'Period' column is present and processed
+        if "Period" not in data.columns:
+            st.error("The dataset must contain a 'Period' column for splitting.")
+            st.stop()
+        
+        # Convert Period to string if necessary
+        data["Period"] = data["Period"].astype(str)
+        period_values = sorted(data["Period"].unique().tolist())
+        
+        # Split selector using Period values
+        st.write("**Select split point for Training and Testing Sets based on 'Period' column**")
+        
+        split_period = st.select_slider(
+            "Select cutoff Period (rows with Period <= selected are training data):",
+            options=period_values,
+            value=period_values[int(len(period_values) * 0.8)]
+        )
+        
+        # Perform the split
+        decomp_train_data = data[data["Period"] <= split_period]
+        decomp_test_data = data[data["Period"] > split_period]
+
+
+        
+        # Frequency input
+        freq = st.number_input("Enter seasonal frequency (e.g., 12 = yearly seasonality for monthly data):", 
+                               min_value=2, 
+                               max_value=min(365, len(decomp_train_data)-1), 
+                               value=12)
+        
+        if ts_column:
+            try:
+                ts_series = decomp_train_data[ts_column]
+        
+                # Convert index to datetime if possible
+                if not pd.api.types.is_datetime64_any_dtype(decomp_train_data.index):
+                    try:
+                        decomp_train_data.index = pd.to_datetime(decomp_train_data.index, errors='coerce')
+                    except:
+                        st.warning("Index could not be converted to datetime. Proceeding with default numeric index.")
+        
+                ts_series = ts_series.dropna()
+        
+                decomposition = seasonal_decompose(ts_series, model='additive', period=freq)
+        
+                st.write(f"**Seasonal Decomposition of `{ts_column}` on Decomposition Training Set ({len(decomp_train_data)} rows)**")
+        
+                fig, axes = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
+        
+                axes[0].plot(ts_series, label="Original")
+                axes[0].set_ylabel("Original")
+                axes[0].legend(loc='upper left')
+        
+                axes[1].plot(decomposition.trend, label="Trend", color="orange")
+                axes[1].set_ylabel("Trend")
+                axes[1].legend(loc='upper left')
+        
+                axes[2].plot(decomposition.seasonal, label="Seasonal", color="green")
+                axes[2].set_ylabel("Seasonal")
+                axes[2].legend(loc='upper left')
+        
+                axes[3].plot(decomposition.resid, label="Residual", color="red")
+                axes[3].set_ylabel("Residual")
+                axes[3].legend(loc='upper left')
+        
+                plt.tight_layout()
+                st.pyplot(fig)
+        
+            except Exception as e:
+                st.error(f"Seasonal decomposition failed: {e}")
 
 
             
