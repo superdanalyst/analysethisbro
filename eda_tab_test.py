@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import datetime as dt
 import sys
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 def eda_dashboard_tab():
     st.markdown("### Exploratory Data Analysis App")
@@ -194,7 +195,62 @@ def eda_dashboard_tab():
         else:
             st.info("Please select a dependent and at least one independent variable for regression.")
 
-            
+        # ======================
+        # SECTION 6: Seasonal Decomposition (on Training Data)
+        # ======================
+        st.write("### 6. Seasonal Decomposition (on Training Data)")
+        
+        # Ask user to pick a column to decompose
+        ts_column = st.selectbox("Select a numeric column for decomposition:", numeric_columns, key="decomp_col")
+        
+        # Ask user for seasonal frequency
+        freq = st.number_input("Enter seasonal frequency (e.g., 12 for monthly data, 7 for weekly):", 
+                               min_value=2, max_value=min(365, len(train_data)-1), value=12)
+        
+        if ts_column:
+            try:
+                ts_series = train_data[ts_column]
+        
+                # Ensure the index is datetime for decomposition if possible
+                if not pd.api.types.is_datetime64_any_dtype(train_data.index):
+                    try:
+                        train_data.index = pd.to_datetime(train_data.index, errors='coerce')
+                    except:
+                        st.warning("Index could not be converted to datetime, proceeding with default index.")
+        
+                # Drop NA to prevent errors in decomposition
+                ts_series = ts_series.dropna()
+        
+                # Perform seasonal decomposition
+                decomposition = seasonal_decompose(ts_series, model='additive', period=freq)
+        
+                st.write(f"**Seasonal Decomposition of `{ts_column}` (Training Set)**")
+        
+                # Plot
+                fig, axes = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
+        
+                axes[0].plot(ts_series, label="Original")
+                axes[0].set_ylabel("Original")
+                axes[0].legend(loc='upper left')
+        
+                axes[1].plot(decomposition.trend, label="Trend", color="orange")
+                axes[1].set_ylabel("Trend")
+                axes[1].legend(loc='upper left')
+        
+                axes[2].plot(decomposition.seasonal, label="Seasonal", color="green")
+                axes[2].set_ylabel("Seasonal")
+                axes[2].legend(loc='upper left')
+        
+                axes[3].plot(decomposition.resid, label="Residual", color="red")
+                axes[3].set_ylabel("Residual")
+                axes[3].legend(loc='upper left')
+        
+                plt.tight_layout()
+                st.pyplot(fig)
+        
+            except Exception as e:
+                st.error(f"Seasonal decomposition failed: {e}")
+
             
     else:
         st.info("Please upload a file to proceed.")
