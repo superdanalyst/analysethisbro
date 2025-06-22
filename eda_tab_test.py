@@ -139,37 +139,61 @@ def eda_dashboard_tab():
         else:
             st.warning("Please select two different numeric columns.")
 
-            
         
         # ======================
-        # SECTION 6: OLS Regression
+        # SECTION 5: OLS Regression using Training/Testing Split
         # ======================
-        st.write("### 5. OLS Regression")
-
-        # Step 1: User selects Y and X variables
+        st.write("### 5. OLS Regression (Using Training and Testing Split)")
+        
         st.write("#### Select variables for OLS Regression")
         y_col = st.selectbox("**Dependent Variable (Y)**", numeric_columns, key="ols_y")
-
+        
         x_cols = st.multiselect("**Independent Variable(s) (X)**", 
                                 [col for col in numeric_columns if col != y_col], 
                                 default=[col for col in numeric_columns if col != y_col][:1],
                                 key="ols_x")
-
+        
         if y_col and x_cols:
             import statsmodels.api as sm
-
-            X = data[x_cols]
-            X = sm.add_constant(X)  # Adds intercept term
-            y = data[y_col]
-
+            from sklearn.metrics import mean_squared_error, r2_score
+        
+            # Split training and testing data (already defined in section 4)
+            X_train = train_data[x_cols]
+            X_train = sm.add_constant(X_train)
+            y_train = train_data[y_col]
+        
+            X_test = test_data[x_cols]
+            X_test = sm.add_constant(X_test)
+            y_test = test_data[y_col]
+        
             try:
-                model = sm.OLS(y, X).fit()
-                st.write("#### Regression Summary")
+                model = sm.OLS(y_train, X_train).fit()
+                y_pred = model.predict(X_test)
+        
+                st.write("#### OLS Regression Summary (Training Data)")
                 st.text(model.summary())
+        
+                # Model Evaluation
+                rmse = mean_squared_error(y_test, y_pred, squared=False)
+                r2 = r2_score(y_test, y_pred)
+        
+                st.write("#### Model Performance on Testing Data")
+                st.metric("R-squared (Test Set)", f"{r2:.4f}")
+                st.metric("RMSE (Test Set)", f"{rmse:.4f}")
+        
+                # Optional: Plot Actual vs Predicted
+                st.write("**Actual vs Predicted (Test Data)**")
+                fig2, ax = plt.subplots()
+                ax.plot(y_test.index, y_test, label='Actual', marker='o')
+                ax.plot(y_test.index, y_pred, label='Predicted', marker='x')
+                ax.legend()
+                st.pyplot(fig2)
+        
             except Exception as e:
                 st.error(f"OLS regression failed: {e}")
         else:
             st.info("Please select a dependent and at least one independent variable for regression.")
+
             
             
     else:
