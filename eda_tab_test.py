@@ -73,7 +73,7 @@ def eda_dashboard_tab():
         else:
             st.write('###### The data has the dimensions :', data.shape)
 
-        st.divider()
+        #st.divider()
         st.sidebar.divider()
 
         vis_select = st.sidebar.checkbox("**C) Is visualisation required for this dataset (hide sidebar for full view of dashboard) ?**")
