@@ -22,7 +22,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 
 st.set_page_config(layout="wide")
-st.title("Stock Picks Testing")
+st.title("Stock Picks Testing (WIP)")
 
 tab1, tab2, tab3 = st.tabs(["Plantation Data", "Textile Data",  "EDA Dashboard"])
 
