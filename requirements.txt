@@ -1,12 +1,10 @@
+git+https://github.com/statsmodels/statsmodels.git
 streamlit
 openpyxl
 pygwalker
 pandas
 matplotlib
 seaborn
-statsmodels
 scipy
 numpy
 scikit-learn
-
-
