@@ -4,8 +4,8 @@ pygwalker
 pandas
 matplotlib
 seaborn
-statsmodels==0.14.0
-scipy==1.12.0
+statsmodels
+scipy
 numpy
 scikit-learn
 
