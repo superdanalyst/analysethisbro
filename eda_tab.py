@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun 19 19:30:00 2025
+Created on Fri Jun 20 17:26:02 2025
 
 @author: manthis
 """
@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import datetime as dt
 import sys
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 def eda_dashboard_tab():
     st.markdown("### Exploratory Data Analysis App")
@@ -72,7 +73,7 @@ def eda_dashboard_tab():
         else:
             st.write('###### The data has the dimensions :', data.shape)
 
-        st.divider()
+        #st.divider()
         st.sidebar.divider()
 
         vis_select = st.sidebar.checkbox("**C) Is visualisation required for this dataset (hide sidebar for full view of dashboard) ?**")
@@ -85,73 +86,182 @@ def eda_dashboard_tab():
                 st.error(f"Error occurred: {e}")
 
         # ======================
-        # SECTION 4: Correlation and Line Chart
+        # SECTION 4: Correlation and Dual-Axis Line Chart with Split Tooltip
         # ======================
         st.divider()
         st.write("### 4. Correlation and Dual-Axis Line Chart")
-
+        
         numeric_columns = data.select_dtypes(include=['float64', 'int64']).columns.tolist()
         if len(numeric_columns) < 2:
             st.info("Not enough numeric columns for correlation or plotting.")
             return
-
+        
         col1 = st.selectbox("Select first column (Y-axis left)", numeric_columns, index=0)
         col2 = st.selectbox("Select second column (Y-axis right)", numeric_columns, index=1)
-
+        
         if col1 and col2 and col1 != col2:
             st.write(f"**Pearson Correlation between `{col1}` and `{col2}`:**")
             correlation = data[col1].corr(data[col2])
             st.metric(label="Correlation Coefficient", value=f"{correlation:.4f}")
-
-            st.write("**Line Chart with Dual Axes**")
+        
+            # Split selector
+            st.write("**Select split point for Training and Testing Sets**")
+            split_index = st.slider("Split index (everything before this is training data):", 
+                                    min_value=1, 
+                                    max_value=len(data)-1, 
+                                    value=int(len(data)*0.8))
+        
+            train_data = data.iloc[:split_index]
+            test_data = data.iloc[split_index:]
+        
+            st.write(f"**Training Data:** {len(train_data)} rows | **Testing Data:** {len(test_data)} rows")
+        
+            # Plot with split indicator
+            st.write("**Line Chart with Dual Axes and Split Point**")
             fig, ax1 = plt.subplots(figsize=(10, 5))
-
+        
             ax1.set_xlabel("Index")
             ax1.set_ylabel(col1, color="tab:blue")
             ax1.plot(data.index, data[col1], color="tab:blue", label=col1, marker='o')
             ax1.tick_params(axis='y', labelcolor="tab:blue")
-
+        
             ax2 = ax1.twinx()
             ax2.set_ylabel(col2, color="tab:red")
             ax2.plot(data.index, data[col2], color="tab:red", label=col2, marker='x')
             ax2.tick_params(axis='y', labelcolor="tab:red")
-
+        
+            # Add vertical line at split
+            ax1.axvline(x=split_index, color='black', linestyle='--')
+            ax1.text(split_index + 1, ax1.get_ylim()[1]*0.95, 'Split', color='black')
+        
             fig.tight_layout()
             st.pyplot(fig)
+        
         else:
             st.warning("Please select two different numeric columns.")
-            
+
         
         # ======================
-        # SECTION 6: OLS Regression
+        # SECTION 5: OLS Regression using Training/Testing Split
         # ======================
-        st.write("### 5. OLS Regression")
-
-        # Step 1: User selects Y and X variables
+        st.write("### 5. OLS Regression (Using Training and Testing Split)")
+        
         st.write("#### Select variables for OLS Regression")
         y_col = st.selectbox("**Dependent Variable (Y)**", numeric_columns, key="ols_y")
-
+        
         x_cols = st.multiselect("**Independent Variable(s) (X)**", 
                                 [col for col in numeric_columns if col != y_col], 
                                 default=[col for col in numeric_columns if col != y_col][:1],
                                 key="ols_x")
-
+        
         if y_col and x_cols:
             import statsmodels.api as sm
-
-            X = data[x_cols]
-            X = sm.add_constant(X)  # Adds intercept term
-            y = data[y_col]
-
+            from sklearn.metrics import mean_squared_error, r2_score
+        
+            # Split training and testing data (already defined in section 4)
+            X_train = train_data[x_cols]
+            X_train = sm.add_constant(X_train)
+            y_train = train_data[y_col]
+        
+            X_test = test_data[x_cols]
+            X_test = sm.add_constant(X_test)
+            y_test = test_data[y_col]
+        
             try:
-                model = sm.OLS(y, X).fit()
-                st.write("#### Regression Summary")
+                model = sm.OLS(y_train, X_train).fit()
+                y_pred = model.predict(X_test)
+        
+                st.write("#### OLS Regression Summary (Training Data)")
                 st.text(model.summary())
+        
+                # Model Evaluation
+                rmse = mean_squared_error(y_test, y_pred, squared=False)
+                r2 = r2_score(y_test, y_pred)
+        
+                st.write("#### Model Performance on Testing Data")
+                st.metric("R-squared (Test Set)", f"{r2:.4f}")
+                st.metric("RMSE (Test Set)", f"{rmse:.4f}")
+        
+                # Optional: Plot Actual vs Predicted
+                st.write("**Actual vs Predicted (Test Data)**")
+                fig2, ax = plt.subplots()
+                ax.plot(y_test.index, y_test, label='Actual', marker='o')
+                ax.plot(y_test.index, y_pred, label='Predicted', marker='x')
+                ax.legend()
+                st.pyplot(fig2)
+        
             except Exception as e:
                 st.error(f"OLS regression failed: {e}")
         else:
             st.info("Please select a dependent and at least one independent variable for regression.")
-            
+
+        # ======================
+        # SECTION 6: Seasonal Decomposition with Independent Train/Test Split
+        # ======================
+        st.write("### 6. Seasonal Decomposition")
+        
+        # Column selection
+        ts_column = st.selectbox("Select a numeric column for decomposition:", numeric_columns, key="decomp_col")
+        
+        # Decomposition-specific split
+        st.write("**Select a split point for seasonal decomposition (training set)**")
+        decomp_split_index = st.slider("Split index for decomposition (before this = training):", 
+                                       min_value=1, 
+                                       max_value=len(data)-1, 
+                                       value=int(len(data)*0.8), 
+                                       key="decomp_split")
+        
+        decomp_train_data = data.iloc[:decomp_split_index]
+        decomp_test_data = data.iloc[decomp_split_index:]
+        
+        # Frequency input
+        freq = st.number_input("Enter seasonal frequency (e.g., 12 = yearly seasonality for monthly data):", 
+                               min_value=2, 
+                               max_value=min(365, len(decomp_train_data)-1), 
+                               value=12)
+        
+        if ts_column:
+            try:
+                ts_series = decomp_train_data[ts_column]
+        
+                # Convert index to datetime if possible
+                if not pd.api.types.is_datetime64_any_dtype(decomp_train_data.index):
+                    try:
+                        decomp_train_data.index = pd.to_datetime(decomp_train_data.index, errors='coerce')
+                    except:
+                        st.warning("Index could not be converted to datetime. Proceeding with default numeric index.")
+        
+                ts_series = ts_series.dropna()
+        
+                decomposition = seasonal_decompose(ts_series, model='additive', period=freq)
+        
+                st.write(f"**Seasonal Decomposition of `{ts_column}` on Decomposition Training Set ({len(decomp_train_data)} rows)**")
+        
+                fig, axes = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
+        
+                axes[0].plot(ts_series, label="Original")
+                axes[0].set_ylabel("Original")
+                axes[0].legend(loc='upper left')
+        
+                axes[1].plot(decomposition.trend, label="Trend", color="orange")
+                axes[1].set_ylabel("Trend")
+                axes[1].legend(loc='upper left')
+        
+                axes[2].plot(decomposition.seasonal, label="Seasonal", color="green")
+                axes[2].set_ylabel("Seasonal")
+                axes[2].legend(loc='upper left')
+        
+                axes[3].plot(decomposition.resid, label="Residual", color="red")
+                axes[3].set_ylabel("Residual")
+                axes[3].legend(loc='upper left')
+        
+                plt.tight_layout()
+                st.pyplot(fig)
+        
+            except Exception as e:
+                st.error(f"Seasonal decomposition failed: {e}")
+
+
             
     else:
         st.info("Please upload a file to proceed.")

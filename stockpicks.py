@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+Created on Sun Jun 22 19:20:33 2025
+
+@author: manthis
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Mon Jun  9 16:43:12 2025
 
 @author: manthis
 """
-from eda_tab import eda_dashboard_tab
+from eda_tab_test import eda_dashboard_tab
 import statsmodels.api as sm
 import streamlit as st
 import pandas as pd
@@ -15,7 +22,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 
 st.set_page_config(layout="wide")
-st.title("Stock Picks Testing")
+st.title("Stock Picks Testing (WIP)")
 
 tab1, tab2, tab3 = st.tabs(["Plantation Data", "Textile Data",  "EDA Dashboard"])
 
