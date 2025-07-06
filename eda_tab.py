@@ -49,6 +49,15 @@ def eda_dashboard_tab():
         data.columns = data.columns.str.replace('_', ' ').str.title()
         data = data.reset_index()
 
+        # --- Sanitize dataframe to avoid React JSON parse errors ---
+        def sanitize_dataframe(df):
+            df = df.copy()
+            df = df.replace([np.nan, np.inf, -np.inf], None)
+            df = df[[col for col in df.columns if not df[col].apply(lambda x: isinstance(x, (dict, list, set))).any()]]
+            return df
+
+        data = sanitize_dataframe(data)
+
         st.sidebar.divider()
         st.write('### 1. Dataset Preview')
         st.dataframe(data, use_container_width=True, hide_index=True)
